@@ -12,10 +12,15 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# realpath, não abspath: o instalador põe um symlink em ~/.local/bin e abspath
+# não o segue, então a CLI instalada procurava o pacote ao lado do link e não
+# achava nada. Quem roda do repositório nunca via isso — quem instalava, sempre.
+_RAIZ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if _RAIZ not in sys.path:
+    sys.path.insert(0, _RAIZ)
 
 from planopt import estado, i18n                      # noqa: E402
-from planopt.classificador import classificar          # noqa: E402
+from planopt.classificador import classificar, TIERS as TIERS_VALIDOS  # noqa: E402
 from planopt.mapeamento import carregar                # noqa: E402
 
 VERSAO = "0.1.0"
@@ -148,6 +153,40 @@ def cmd_candidatos(resto):
         esforco = (" · " + escolha["esforco"]) if escolha["esforco"] else ""
         print("  %-12s %-14s %s%s" % (escolha["alvo"],
                                       _c(CINZA, escolha["carteira"]), modelo, esforco))
+    return 0
+
+
+def cmd_modelo(resto, como_json=False):
+    """Consulta direta: alvo + faixa -> modelo e esforço, sem classificar nada.
+
+    Existe para quem já sabe a faixa. O `ia-team` classifica uma vez e depois
+    pergunta o modelo de cada candidato; obrigá-lo a reclassificar o mesmo texto
+    a cada pergunta seria trabalho repetido e, pior, uma chance de as duas
+    respostas discordarem.
+    """
+    if len(resto) < 2:
+        print("uso: planopt modelo <alvo> <%s>" % "|".join(TIERS_VALIDOS), file=sys.stderr)
+        print(_t("cli.alvos", ", ".join(carregar().nomes())), file=sys.stderr)
+        return 2
+    alvo, tier = resto[0], resto[1]
+    mapa = carregar()
+    if not mapa.conhece(alvo):
+        print(_t("cli.alvo_desconhecido", alvo), file=sys.stderr)
+        return 2
+    if tier not in TIERS_VALIDOS:
+        print(_t("cli.desconhecido", tier), file=sys.stderr)
+        return 2
+    escolha = mapa.escolha(alvo, tier)
+    if escolha is None:
+        if como_json:
+            print("null")
+        return 1
+    if como_json:
+        print(json.dumps(escolha, ensure_ascii=False))
+        return 0
+    partes = [p for p in (escolha["modelo"], escolha["esforco"]) if p]
+    if partes:
+        print(" ".join(partes))
     return 0
 
 
@@ -289,6 +328,7 @@ def cmd_ajuda():
     print("  explica <texto>         " + _t("res.por_que"))
     print("  escolhe <alvo> <texto>  " + _t("res.escolha", "…"))
     print("  candidatos <texto>")
+    print("  modelo <alvo> <faixa>   " + _t("res.escolha", "…"))
     print("  modo [%s]" % "|".join(estado.MODOS))
     print("  idioma [%s]" % "|".join(i18n.idiomas()))
     print("  gancho | statusline | limpa | versao")
@@ -312,6 +352,8 @@ def main(argv):
         return cmd_escolhe(resto, como_json)
     if comando in ("candidatos", "candidates"):
         return cmd_candidatos(resto)
+    if comando in ("modelo", "model"):
+        return cmd_modelo(resto, como_json)
     if comando in ("modo", "mode"):
         return cmd_modo(resto)
     if comando in ("idioma", "lang", "language"):
