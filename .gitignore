@@ -1,0 +1,15 @@
+# Notas de trabalho: são o registro entre nós dois, não documentação do repo.
+PEDIDOS.md
+CONTRATO.md
+IDEIAS.md
+
+# Estado local e sujeira
+__pycache__/
+*.pyc
+.DS_Store
+
+# O corpus de calibração são os pedidos reais do Miguel: nomes de projeto,
+# domínio, caminhos da máquina dele. Fica local, nunca no repositório público.
+corpus/
+*.corpus.json
+NOTAS-DESIGN.md

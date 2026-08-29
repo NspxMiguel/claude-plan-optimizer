@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""planopt — classifica um pedido e escolhe modelo e esforço à altura dele.
+
+    planopt classifica "muda a cor do botao"
+    planopt escolhe claude "reescreve o roteamento inteiro"
+    planopt explica "pq o app trava quando abro duas janelas"
+    planopt gancho          # UserPromptSubmit do Claude Code
+    planopt statusline      # linha de status: mostra e, de quebra, sensoreia
+"""
+
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from planopt import estado, i18n                      # noqa: E402
+from planopt.classificador import classificar          # noqa: E402
+from planopt.mapeamento import carregar                # noqa: E402
+
+VERSAO = "0.1.0"
+
+VERDE, AMARELO, VERMELHO, CINZA, NEGRITO, ZERA = (
+    "\033[32m", "\033[33m", "\033[31m", "\033[90m", "\033[1m", "\033[0m")
+
+COR_TIER = {"trivial": VERDE, "barata": VERDE, "media": AMARELO, "cara": VERMELHO}
+
+
+def _colorido():
+    return sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def _c(cor, texto):
+    return "%s%s%s" % (cor, texto, ZERA) if _colorido() else texto
+
+
+def _t(chave, *args):
+    return i18n.t(chave, *args, config=estado.ler_config())
+
+
+def _rotulo(tier):
+    return _t("tier." + tier) if tier else _t("tier.continuacao")
+
+
+def _texto_dos_argumentos(resto):
+    if resto:
+        return " ".join(resto)
+    if not sys.stdin.isatty():
+        return sys.stdin.read()
+    return ""
+
+
+# ------------------------------------------------------------------ comandos ---
+def cmd_classifica(resto, como_json=False):
+    texto = _texto_dos_argumentos(resto)
+    if not texto.strip():
+        print(_t("cli.sem_texto"), file=sys.stderr)
+        return 2
+    veredito = classificar(texto)
+    if como_json:
+        print(json.dumps(veredito, ensure_ascii=False, indent=1))
+        return 0
+    if veredito["vazio"]:
+        print(_t("res.vazio"))
+        return 0
+    if veredito["continuacao"]:
+        print(_c(CINZA, _t("res.continuacao")))
+        return 0
+    tier = veredito["tier"]
+    print(_t("res.tier", _c(COR_TIER.get(tier, ""), _c(NEGRITO, _rotulo(tier)))))
+    if veredito["confianca"] < 0.7:
+        print(_c(AMARELO, "  " + _t("res.confianca_baixa")))
+    return 0
+
+
+def cmd_explica(resto):
+    texto = _texto_dos_argumentos(resto)
+    if not texto.strip():
+        print(_t("cli.sem_texto"), file=sys.stderr)
+        return 2
+    veredito = classificar(texto)
+    if veredito["vazio"]:
+        print(_t("res.vazio"))
+        return 0
+    if veredito["continuacao"]:
+        print(_c(CINZA, _t("res.continuacao")))
+        for motivo in veredito["motivos"]:
+            print("  · " + motivo)
+        return 0
+    tier = veredito["tier"]
+    print(_t("res.tier", _c(COR_TIER.get(tier, ""), _c(NEGRITO, _rotulo(tier))))
+          + _c(CINZA, "   (%+d)" % veredito["pontos"]))
+    if veredito["confianca"] < 0.7:
+        print(_c(AMARELO, "  " + _t("res.confianca_baixa")))
+    print()
+    print(_t("res.por_que"))
+    for item in veredito["detalhe"]:
+        sinal = _c(VERMELHO if item["peso"] > 0 else VERDE, "%+d" % item["peso"])
+        print("  %s  %s" % (sinal, item["motivo"]))
+    if not veredito["detalhe"]:
+        print(_c(CINZA, "  —"))
+    return 0
+
+
+def cmd_escolhe(resto, como_json=False):
+    if not resto:
+        print(_t("cli.alvos", ", ".join(carregar().nomes())), file=sys.stderr)
+        return 2
+    alvo, resto = resto[0], resto[1:]
+    mapa = carregar()
+    if not mapa.conhece(alvo):
+        print(_t("cli.alvo_desconhecido", alvo), file=sys.stderr)
+        print(_t("cli.alvos", ", ".join(mapa.nomes())), file=sys.stderr)
+        return 2
+    texto = _texto_dos_argumentos(resto)
+    veredito = classificar(texto)
+    tier = veredito["tier"]
+    escolha = mapa.escolha(alvo, tier) if tier else None
+
+    if como_json:
+        print(json.dumps({"veredito": veredito, "escolha": escolha},
+                         ensure_ascii=False, indent=1))
+        return 0
+    if veredito["continuacao"]:
+        print(_c(CINZA, _t("res.continuacao")))
+        return 0
+    if escolha is None:
+        print(_t("res.tier", _rotulo(tier)))
+        print(_c(AMARELO, _t("res.sem_faixa")))
+        return 1
+    partes = [p for p in (escolha["modelo"], escolha["esforco"]) if p]
+    print(_t("res.tier", _c(COR_TIER.get(tier, ""), _rotulo(tier))))
+    print(_t("res.escolha", _c(NEGRITO, " · ".join(partes) or escolha["rotulo"]))
+          + _c(CINZA, "   [%s]" % _t("aplicacao." + escolha["aplicacao"])))
+    return 0
+
+
+def cmd_candidatos(resto):
+    texto = _texto_dos_argumentos(resto)
+    veredito = classificar(texto)
+    if veredito["continuacao"] or not veredito["tier"]:
+        print(_c(CINZA, _t("res.continuacao")))
+        return 0
+    mapa = carregar()
+    print(_t("res.tier", _c(COR_TIER.get(veredito["tier"], ""), _rotulo(veredito["tier"]))))
+    for escolha in mapa.candidatos(veredito["tier"]):
+        modelo = escolha["modelo"] or _c(CINZA, "(padrão do agente)")
+        esforco = (" · " + escolha["esforco"]) if escolha["esforco"] else ""
+        print("  %-12s %-14s %s%s" % (escolha["alvo"],
+                                      _c(CINZA, escolha["carteira"]), modelo, esforco))
+    return 0
+
+
+def cmd_modo(resto):
+    if not resto:
+        atual = estado.modo()
+        print(_t("cli.modo_atual", "%s — %s" % (atual, _t("modo." + atual))))
+        return 0
+    novo = resto[0]
+    if novo not in estado.MODOS:
+        print(_t("cli.desconhecido", novo), file=sys.stderr)
+        print("  " + ", ".join(estado.MODOS), file=sys.stderr)
+        return 2
+    estado.gravar_config(modo=novo)
+    print(_t("cli.modo_mudou", "%s — %s" % (novo, _t("modo." + novo))))
+    return 0
+
+
+def cmd_idioma(resto):
+    if not resto:
+        print(_t("cli.idioma_atual", i18n.idioma(estado.ler_config())))
+        return 0
+    novo = resto[0][:2].lower()
+    if novo not in i18n.idiomas():
+        print(_t("cli.desconhecido", resto[0]), file=sys.stderr)
+        print("  " + ", ".join(i18n.idiomas()), file=sys.stderr)
+        return 2
+    estado.gravar_config(idioma=novo)
+    print(i18n.t("cli.idioma_mudou", novo, lang=novo))
+    return 0
+
+
+def cmd_statusline():
+    """Mostra a linha de status e, de quebra, é o sensor do modelo em uso.
+
+    O trabalho duplo não é gambiarra: a linha de status é o único lugar do
+    Claude Code que recebe `model.id` e a porcentagem da janela de cinco horas
+    a cada quadro. Sem ela, o gancho não tem como saber em que modelo a sessão
+    está — e sem saber isso, não dá para avisar que Opus está mudando uma cor.
+    """
+    try:
+        entrada = json.load(sys.stdin)
+    except (ValueError, OSError):
+        entrada = {}
+    modelo = entrada.get("model") or {}
+    limites = entrada.get("rate_limits") or {}
+    cinco = (limites.get("five_hour") or {})
+    sete = (limites.get("seven_day") or {})
+
+    estado.anotar_sessao(
+        entrada.get("session_id") or "",
+        modelo_id=modelo.get("id"),
+        modelo_nome=modelo.get("display_name"),
+        cinco_horas=cinco.get("used_percentage"),
+        sete_dias=sete.get("used_percentage"),
+        reseta_em=cinco.get("resets_at"),
+    )
+
+    partes = []
+    nome = modelo.get("display_name") or modelo.get("id")
+    if nome:
+        partes.append(nome)
+    usado = cinco.get("used_percentage")
+    if isinstance(usado, (int, float)):
+        partes.append("5h %d%%" % round(usado))
+    pasta = (entrada.get("workspace") or {}).get("current_dir") or entrada.get("cwd")
+    if pasta:
+        partes.append(os.path.basename(pasta.rstrip("/")))
+    print(" · ".join(partes))
+    return 0
+
+
+def cmd_gancho():
+    """UserPromptSubmit: opina antes de o modelo ler o pedido.
+
+    Fala pouco de propósito. Este gancho entra em toda mensagem, e uma linha
+    inútil repetida cem vezes por dia vira ruído que a pessoa aprende a ignorar
+    — e um conselho ignorado é pior que conselho nenhum, porque custa contexto.
+    """
+    try:
+        entrada = json.load(sys.stdin)
+    except (ValueError, OSError):
+        return 0
+    texto = (entrada.get("prompt") or "").strip()
+    if not texto:
+        return 0
+
+    modo = estado.modo()
+    veredito = classificar(texto)
+    sessao = estado.ler_sessao(entrada.get("session_id") or "")
+    modelo_atual = ((sessao or {}).get("modelo_id") or "").lower()
+
+    estado.anotar({"tier": veredito["tier"], "pontos": veredito["pontos"],
+                   "continuacao": veredito["continuacao"], "modelo": modelo_atual,
+                   "modo": modo, "tamanho": len(texto)})
+
+    if modo == "mudo":
+        return 0
+
+    tier = veredito["tier"]
+    barato = tier in ("trivial", "barata")
+    caro_no_modelo = modelo_atual.startswith("claude-opus") or "opus" in modelo_atual
+
+    # A interrupção é estreita de propósito: modelo caro, tarefa comprovadamente
+    # barata, e certeza. Guarda que dispara na dúvida é desligada no mesmo dia.
+    if (modo == "guarda" and barato and caro_no_modelo
+            and veredito["confianca"] >= 0.7):
+        recomendado = carregar().escolha("claude", tier) or {}
+        print(json.dumps({
+            "decision": "block",
+            "reason": _t("hook.opus_em_trivial",
+                         (sessao or {}).get("modelo_nome") or modelo_atual,
+                         _rotulo(tier), recomendado.get("modelo", "haiku")),
+        }, ensure_ascii=False))
+        return 0
+
+    if veredito["continuacao"]:
+        # Silêncio: repetir isso em todo "ok" e todo "dale" seria a maior fonte
+        # de ruído do dia, e o conselho é "não mude nada" — que é o padrão.
+        return 0
+
+    if barato and veredito["confianca"] >= 0.7:
+        escolha = carregar().escolha("subagente", tier) or {}
+        delegue = "%s%s" % (escolha.get("modelo", "haiku"),
+                            (" · " + escolha["esforco"]) if escolha.get("esforco") else "")
+        print(_t("hook.trivial", _rotulo(tier), delegue,
+                 "; ".join(veredito["motivos"][:2]) or "—"))
+        return 0
+
+    if tier == "cara":
+        print(_t("hook.cara", _rotulo(tier), "; ".join(veredito["motivos"][:2]) or "—"))
+    return 0
+
+
+def cmd_ajuda():
+    print(__doc__.strip())
+    print()
+    print("  classifica <texto>      " + _t("res.tier", "…"))
+    print("  explica <texto>         " + _t("res.por_que"))
+    print("  escolhe <alvo> <texto>  " + _t("res.escolha", "…"))
+    print("  candidatos <texto>")
+    print("  modo [%s]" % "|".join(estado.MODOS))
+    print("  idioma [%s]" % "|".join(i18n.idiomas()))
+    print("  gancho | statusline | limpa | versao")
+    return 0
+
+
+def main(argv):
+    if not argv:
+        return cmd_ajuda()
+    como_json = "--json" in argv
+    argv = [a for a in argv if a != "--json"]
+    if not argv:
+        return cmd_ajuda()
+    comando, resto = argv[0], argv[1:]
+
+    if comando in ("classifica", "classify", "c"):
+        return cmd_classifica(resto, como_json)
+    if comando in ("explica", "explain", "x"):
+        return cmd_explica(resto)
+    if comando in ("escolhe", "pick", "p"):
+        return cmd_escolhe(resto, como_json)
+    if comando in ("candidatos", "candidates"):
+        return cmd_candidatos(resto)
+    if comando in ("modo", "mode"):
+        return cmd_modo(resto)
+    if comando in ("idioma", "lang", "language"):
+        return cmd_idioma(resto)
+    if comando in ("gancho", "hook"):
+        return cmd_gancho()
+    if comando == "statusline":
+        return cmd_statusline()
+    if comando in ("limpa", "clean"):
+        print(estado.limpar_sessoes())
+        return 0
+    if comando in ("versao", "version", "--version", "-v"):
+        print(VERSAO)
+        return 0
+    if comando in ("ajuda", "help", "--help", "-h"):
+        return cmd_ajuda()
+    print(_t("cli.desconhecido", comando), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except BrokenPipeError:
+        sys.exit(0)
+    except KeyboardInterrupt:
+        sys.exit(130)

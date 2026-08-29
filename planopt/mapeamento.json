@@ -1,0 +1,270 @@
+{
+  "versao": 1,
+  "_leia": "Dados, nao codigo. Editar aqui nao exige mexer em Python. Cada alvo diz se ele e obrigatorio (o classificador manda) ou conselho (o classificador opina), qual carteira ele gasta, e o que fazer em cada faixa. Faixa sem entrada significa 'este alvo nao serve para esse tipo de trabalho'. Onde ha lista de modelos, ela e ordem de queda: plano gratuito responde 429 com frequencia, e um modelo so vira um agente que nao trabalha metade do tempo.",
+  "alvos": {
+    "claude": {
+      "rotulo": "Claude Code (sessão)",
+      "aplicacao": "conselho",
+      "carteira": "medida",
+      "esforco_suportado": true,
+      "esforco_flag": "--effort",
+      "_nota": "Conselho, não ordem: nenhum gancho do Claude Code troca o modelo da sessão em curso. O que existe é --model/--effort na abertura e o /model digitado por quem está lendo.",
+      "tiers": {
+        "trivial": {
+          "modelo": "haiku",
+          "esforco": "low"
+        },
+        "barata": {
+          "modelo": "haiku",
+          "esforco": "medium"
+        },
+        "media": {
+          "modelo": "sonnet",
+          "esforco": "high"
+        },
+        "cara": {
+          "modelo": "opus",
+          "esforco": "high"
+        }
+      }
+    },
+    "subagente": {
+      "rotulo": "Subagente do Claude Code",
+      "aplicacao": "obrigatorio",
+      "carteira": "medida",
+      "esforco_suportado": true,
+      "esforco_flag": "effort",
+      "_nota": "Aqui a escolha é obrigatória e é onde o gasto de verdade acontece: a ferramenta Agent aceita model e effort por chamada, e um fan-out largo em Opus queima uma janela inteira. Fan-out é sempre a faixa mais barata que resolve; Opus entra sozinho, na síntese.",
+      "tiers": {
+        "trivial": {
+          "modelo": "haiku",
+          "esforco": "low"
+        },
+        "barata": {
+          "modelo": "haiku",
+          "esforco": "medium"
+        },
+        "media": {
+          "modelo": "sonnet",
+          "esforco": "high"
+        },
+        "cara": {
+          "modelo": "opus",
+          "esforco": "high"
+        }
+      }
+    },
+    "ollama": {
+      "rotulo": "Ollama (local)",
+      "aplicacao": "obrigatorio",
+      "carteira": "local",
+      "esforco_suportado": false,
+      "_nota": "Grátis no sentido absoluto: sem plano, sem chave, sem cota. Primeira escolha para trabalho trivial — se roda na máquina, não precisa sair dela.",
+      "tiers": {
+        "trivial": {
+          "modelo": ""
+        },
+        "barata": {
+          "modelo": ""
+        }
+      }
+    },
+    "groq": {
+      "rotulo": "Groq",
+      "aplicacao": "obrigatorio",
+      "carteira": "gratis",
+      "esforco_suportado": false,
+      "tiers": {
+        "trivial": {
+          "modelo": "openai/gpt-oss-20b"
+        },
+        "barata": {
+          "modelo": "openai/gpt-oss-20b"
+        },
+        "media": {
+          "modelo": "openai/gpt-oss-120b"
+        }
+      },
+      "_nota": "Rapido e gratis, mas com teto diario. Bom para lote de trabalho trivial; ruim para tarefa longa, que consome o dia inteiro de uma vez."
+    },
+    "openrouter": {
+      "rotulo": "OpenRouter (modelos gratis)",
+      "aplicacao": "obrigatorio",
+      "carteira": "gratis",
+      "esforco_suportado": false,
+      "_nota": "Ordem medida, nao adivinhada: os dez modelos gratis que responderam foram postos para trocar a cor de um botao em 28/08/2026, e nove acertaram. A ordem aqui e a do custo — tokens gastos na mesma tarefa — porque quando todos acertam, o que sobra para decidir e o preco. Ver docs/MODELOS-GRATIS.md.",
+      "tiers": {
+        "trivial": {
+          "modelo": [
+            "poolside/laguna-xs-2.1:free",
+            "poolside/laguna-s-2.1:free",
+            "inclusionai/ling-3.0-flash-fin:free",
+            "minimax/minimax-m3:free",
+            "liquid/lfm-2.5-2.6b:free"
+          ]
+        },
+        "barata": {
+          "modelo": [
+            "poolside/laguna-s-2.1:free",
+            "cohere/north-mini-code:free",
+            "google/gemma-4-31b-it:free",
+            "minimax/minimax-m2.7:free"
+          ]
+        },
+        "media": {
+          "modelo": [
+            "z-ai/glm-5.2:free",
+            "nvidia/nemotron-3-super-120b-a12b:free",
+            "minimax/minimax-m3:free"
+          ]
+        },
+        "cara": {
+          "modelo": [
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "z-ai/glm-5.2:free"
+          ]
+        }
+      }
+    },
+    "omniroute": {
+      "rotulo": "OmniRoute",
+      "aplicacao": "obrigatorio",
+      "carteira": "gratis",
+      "esforco_suportado": false,
+      "tiers": {
+        "trivial": {
+          "modelo": "auto/coding:free"
+        },
+        "barata": {
+          "modelo": "auto/coding:free"
+        },
+        "media": {
+          "modelo": "auto/best-coding"
+        },
+        "cara": {
+          "modelo": "auto/best-reasoning"
+        }
+      }
+    },
+    "codex": {
+      "rotulo": "Codex",
+      "aplicacao": "obrigatorio",
+      "carteira": "secundaria",
+      "esforco_suportado": true,
+      "esforco_flag": "-c model_reasoning_effort=",
+      "_nota": "Primeira escolha do trabalho caro: a conta é outra, não a que este projeto existe para proteger.",
+      "tiers": {
+        "barata": {
+          "modelo": "",
+          "esforco": "low"
+        },
+        "media": {
+          "modelo": "",
+          "esforco": "medium"
+        },
+        "cara": {
+          "modelo": "",
+          "esforco": "high"
+        }
+      }
+    },
+    "gemini": {
+      "rotulo": "Gemini",
+      "aplicacao": "obrigatorio",
+      "carteira": "gratis",
+      "esforco_suportado": false,
+      "_nota": "Contexto enorme: vale quando o trabalho é ler repositório inteiro, não quando é escrever pouco.",
+      "tiers": {
+        "media": {
+          "modelo": ""
+        },
+        "cara": {
+          "modelo": ""
+        }
+      }
+    },
+    "antigravity": {
+      "rotulo": "Antigravity",
+      "aplicacao": "obrigatorio",
+      "carteira": "gratis",
+      "esforco_suportado": false,
+      "tiers": {
+        "media": {
+          "modelo": ""
+        }
+      }
+    },
+    "opencode": {
+      "rotulo": "opencode",
+      "aplicacao": "obrigatorio",
+      "carteira": "depende_do_provedor",
+      "esforco_suportado": false,
+      "_nota": "Sem modelo explícito, o adaptador pegava a primeira linha de `opencode models` — que é ordem alfabética, não escolha. Aqui todo tier nomeia um modelo.",
+      "tiers": {
+        "trivial": {
+          "modelo": ""
+        },
+        "barata": {
+          "modelo": ""
+        },
+        "media": {
+          "modelo": ""
+        },
+        "cara": {
+          "modelo": ""
+        }
+      }
+    },
+    "cursor": {
+      "rotulo": "Cursor",
+      "aplicacao": "obrigatorio",
+      "carteira": "emprestada",
+      "esforco_suportado": true,
+      "esforco_flag": "[effort=]",
+      "_nota": "A conta é de outra pessoa. Trabalho trivial nunca vai para cá automaticamente: gastar cota emprestada em mudança de cor é o pior uso possível dela.",
+      "tiers": {
+        "media": {
+          "modelo": "cursor-grok-4.6-high"
+        },
+        "cara": {
+          "modelo": "composer-2.5"
+        }
+      }
+    },
+    "deepseek": {
+      "rotulo": "DeepSeek",
+      "aplicacao": "obrigatorio",
+      "carteira": "paga",
+      "esforco_suportado": false,
+      "_nota": "Nao e gratis, e e facil achar que e. A API propria da DeepSeek sempre cobrou, e o `deepseek-chat-v3.1:free` que o OpenRouter servia saiu da lista gratuita — conferido em 28/08/2026 contra /api/v1/models, onde nenhum id deepseek termina em :free. Fica aqui marcado como pago para nao ser escolhido sozinho.",
+      "tiers": {
+        "media": {
+          "modelo": "deepseek-chat"
+        },
+        "cara": {
+          "modelo": "deepseek-reasoner"
+        }
+      }
+    }
+  },
+  "esforcos": {
+    "_nota": "xhigh e max nunca entram por escolha automática. Multiplicam token de raciocínio contra o plano que este projeto protege, e nenhum sinal local separa 'difícil' de 'muito difícil' com confiança. Ficam para quem digita à mão.",
+    "automaticos": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "so_a_mao": [
+      "xhigh",
+      "max"
+    ]
+  },
+  "evitar_em_trivial": {
+    "_nota": "Modelo de raciocinio na faixa trivial e o mesmo desperdicio do Opus mudando uma cor, so num andar mais barato: o nemotron-3.5-lightning gastou 484 tokens e escreveu um 'thinking process' para trocar um hexadecimal, contra 113 do laguna. Quando a resposta esta no proprio pedido, pensar e custo puro.",
+    "modelos": [
+      "nvidia/nemotron-3.5-lightning:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "deepseek-reasoner"
+    ]
+  }
+}
