@@ -15,8 +15,11 @@ verifica() { # verifica <descrição> <comando> <padrão esperado>
 }
 verifica "classifica responde"      "python3 bin/planopt classifica 'muda a cor do botao'" 'barata|trivial'
 verifica "continuação é reconhecida" "python3 bin/planopt classifica 'dale'"                'ontinua'
-verifica "escopo aberto é caro"      "python3 bin/planopt classifica 'testa tudo, revisa o app inteiro'" 'cara'
-verifica "explica mostra os sinais"  "python3 bin/planopt explica 'pq o app trava'"         'Por qu'
+# These two assert the Portuguese wording, so they have to pin the language the
+# same way the English case below does. Without the pin they follow the system
+# locale: green on a pt-BR machine, red on CI, where the locale is C.
+verifica "escopo aberto é caro"      "PLANOPT_LANG=pt python3 bin/planopt classifica 'testa tudo, revisa o app inteiro'" 'cara'
+verifica "explica mostra os sinais"  "PLANOPT_LANG=pt python3 bin/planopt explica 'pq o app trava'"         'Por qu'
 verifica "escolhe dá modelo"         "python3 bin/planopt escolhe subagente 'muda a cor'"   'haiku'
 verifica "candidatos vêm do grátis"  "python3 bin/planopt candidatos 'muda a cor do botao'" 'gratis'
 verifica "json é json"               "python3 bin/planopt classifica --json 'faz um app'"   '\"tier\"'
