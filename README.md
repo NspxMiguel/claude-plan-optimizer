@@ -145,3 +145,11 @@ docs/MODELOS-GRATIS.md     the measurement the cheap tiers rest on
 ## Licence
 
 MIT.
+
+---
+
+## Documentação
+
+Índice completo em [`docs/INDEX.md`](docs/INDEX.md).
+
+_Hub multi-repo: `~/Documents/Documentacao-Repos/INDEX.md` (atualizado 2026-08-31)._
