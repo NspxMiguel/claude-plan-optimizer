@@ -105,6 +105,17 @@ class Mapeamento:
         saida.sort(key=lambda e: (ordem.get(e["carteira"], len(_ORDEM_CARTEIRA)), e["alvo"]))
         return saida
 
+    def melhor_gratis(self, tier, disponiveis=None):
+        """O candidato mais barato que não é a conta medida, ou ``None``.
+
+        Atalho para o caso mais comum de `candidatos`: uma sugestão só, para
+        colocar ao lado do conselho de subagente — que ainda gasta a conta
+        medida, só que num modelo mais barato dela. Isto aqui é sair da conta
+        de vez.
+        """
+        lista = self.candidatos(tier, disponiveis=disponiveis)
+        return lista[0] if lista else None
+
     # -------------------------------------------------------------- esforços ---
     def esforcos_automaticos(self):
         return tuple((self.dados.get("esforcos") or {}).get("automaticos") or ())

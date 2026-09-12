@@ -63,6 +63,55 @@ already running. They are detected and excluded rather than guessed at. The
 mirror case matters too: `ok, agora refaz o backend inteiro` starts with `ok` and
 is the most expensive request in the set.
 
+## Making a metered plan act like a bigger one
+
+The status line already receives the five-hour and seven-day usage percentage
+every frame (`estado.anotar_sessao`) — the hook just never read it. It does now:
+`planopt pressao` turns that telemetry into three states, `normal`, `alerta`,
+`critica`, and the hook watches for the last one. When the window is genuinely
+tight, `media`-tier requests get the same "try the free option first" nudge
+that `trivial`/`barata` always got — not because the task got easier, but
+because what is left of the plan got shorter. This is what makes a metered
+plan (Pro) render like it had more headroom (Max) without spending more: the
+same subscription, spent later in the window instead of earlier.
+
+The interrupt in `guarda` mode does **not** grow with pressure — only the talk
+does. Widening what actually blocks is the kind of change this project has
+already seen turned off the same day it shipped, and pressure alone is not
+certainty.
+
+```
+$ planopt pressao
+Janela em 40% (5h) / 97% (7 dias) — crítico: só o que só o Claude resolve
+fica na conta medida.
+  cara      -> gemini      Gemini
+  média     -> antigravity Antigravity
+  barata    -> ollama      Ollama (local)
+  trivial   -> ollama      Ollama (local)
+```
+
+## Partitioning to other free AIs, not just a cheaper Claude
+
+A subagent recommendation (`haiku`, low effort) is still billed to the same
+metered account — cheaper inside the plan, but still the plan. That is a
+different thing from **not touching the plan at all**, which is what
+`ollama`, `groq`, `openrouter`, `gemini`, `antigravity`, `opencode` and
+`codex` (own account) are for. Every advisory line the hook prints for a
+cheap task now names both: the subagent choice for when you are about to
+spawn a `Task`, and the free/local target for when the work can leave Claude
+Code entirely — via `team`.
+
+```
+[planopt] Este pedido é barata. Não gaste modelo grande nele: faça direto,
+e se for delegar, haiku · medium. Motivo: pede obra, não conversa.
+  · sem gastar a conta medida: Ollama (local).
+```
+
+`planopt candidatos "<request>"` already listed every free target for a
+given tier, cheapest first — it always excluded the metered account by
+default. What changed is that the hook now surfaces the head of that list
+proactively, instead of requiring you to ask for it.
+
 ## Enforced or advisory — the honest table
 
 Claude Code's session model **cannot be changed programmatically**. No hook
@@ -101,6 +150,7 @@ planopt classifica "<request>"          # the tier
 planopt explica    "<request>"          # the tier, and every signal that fired
 planopt escolhe subagente "<request>"   # model + effort for that target
 planopt candidatos "<request>"          # everyone who can do it, cheapest first
+planopt pressao [session_id]            # how much of the metered window is left
 planopt modo aviso|guarda|mudo          # how loud the hook is
 planopt idioma pt|en
 ```
@@ -136,7 +186,7 @@ the default, `PLANOPT_LANG` forces one, and `planopt idioma` persists a choice.
 planopt/classificador.py   the scoring, the bands, the asymmetry
 planopt/lexico.py          the signals, pt + en in one pattern each
 planopt/mapeamento.json    tier -> model + effort, per target. Data, editable.
-planopt/estado.py          config, and the status-line-to-hook bridge
+planopt/estado.py          config, the status-line-to-hook bridge, and pressao()
 bin/planopt                the CLI, the hook, the status line
 skill/SKILL.md             what an agent should do with all of this
 docs/MODELOS-GRATIS.md     the measurement the cheap tiers rest on

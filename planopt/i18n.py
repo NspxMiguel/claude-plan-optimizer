@@ -50,6 +50,27 @@ TEXTOS = {
             "Isso é o desperdício que o planopt existe para evitar: "
             "resolva sem gastar raciocínio caro, ou troque com /model %s."
         ),
+        "hook.gratis": "  · sem gastar a conta medida: %s.",
+        "hook.pressao_media": (
+            "[planopt] A janela de uso está apertada e este pedido é média. "
+            "Sonnet ainda vale se só o Claude resolve — mas dá pra tentar de "
+            "graça primeiro. Motivo: %s."
+        ),
+
+        "res.sem_pressao": (
+            "Sem telemetria ainda — a linha de status precisa rodar pelo "
+            "menos um quadro nesta sessão."
+        ),
+        "res.pressao_normal": "Janela em %s%% (5h) / %s%% (7 dias) — folga.",
+        "res.pressao_alerta": (
+            "Janela em %s%% (5h) / %s%% (7 dias) — já compensa mandar as "
+            "faixas baratas pro grátis."
+        ),
+        "res.pressao_critica": (
+            "Janela em %s%% (5h) / %s%% (7 dias) — crítico: só o que só o "
+            "Claude resolve fica na conta medida."
+        ),
+        "res.candidato_gratis": "  %-8s -> %-10s %s",
 
         "cli.uso": "uso: planopt <comando> [argumentos]",
         "cli.desconhecido": "comando desconhecido: %s",
@@ -101,6 +122,27 @@ TEXTOS = {
             "That is the waste planopt exists to prevent: "
             "handle it without expensive reasoning, or switch with /model %s."
         ),
+        "hook.gratis": "  · without touching the metered account: %s.",
+        "hook.pressao_media": (
+            "[planopt] The usage window is tight and this request is medium. "
+            "Sonnet still earns its place if only Claude can do it — but it's "
+            "worth trying free first. Reason: %s."
+        ),
+
+        "res.sem_pressao": (
+            "No telemetry yet — the status line needs to run at least one "
+            "frame in this session."
+        ),
+        "res.pressao_normal": "Window at %s%% (5h) / %s%% (7 day) — plenty of room.",
+        "res.pressao_alerta": (
+            "Window at %s%% (5h) / %s%% (7 day) — already worth moving the "
+            "cheap tiers to the free targets."
+        ),
+        "res.pressao_critica": (
+            "Window at %s%% (5h) / %s%% (7 day) — critical: keep the metered "
+            "account only for what only Claude can do."
+        ),
+        "res.candidato_gratis": "  %-8s -> %-10s %s",
 
         "cli.uso": "usage: planopt <command> [arguments]",
         "cli.desconhecido": "unknown command: %s",

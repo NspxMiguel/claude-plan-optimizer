@@ -70,6 +70,31 @@ class Carteira(unittest.TestCase):
                 self.assertTrue(carteiras & {"local", "gratis"})
 
 
+class MelhorGratis(unittest.TestCase):
+    """O atalho que o gancho usa para sugerir sair da conta medida."""
+
+    def setUp(self):
+        self.m = Mapeamento()
+
+    def test_devolve_a_cabeca_de_candidatos(self):
+        for tier in TIERS:
+            with self.subTest(tier=tier):
+                self.assertEqual(self.m.melhor_gratis(tier), self.m.candidatos(tier)[0]
+                                  if self.m.candidatos(tier) else None)
+
+    def test_nunca_devolve_conta_medida(self):
+        for tier in TIERS:
+            candidato = self.m.melhor_gratis(tier)
+            if candidato:
+                with self.subTest(tier=tier):
+                    self.assertNotIn(candidato["alvo"], ("claude", "subagente"))
+
+    def test_trivial_cai_no_local(self):
+        candidato = self.m.melhor_gratis("trivial")
+        self.assertIsNotNone(candidato)
+        self.assertEqual(candidato["carteira"], "local")
+
+
 class Fila(unittest.TestCase):
     def setUp(self):
         self.m = Mapeamento()

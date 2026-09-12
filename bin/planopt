@@ -23,7 +23,7 @@ from planopt import estado, i18n                      # noqa: E402
 from planopt.classificador import classificar, TIERS as TIERS_VALIDOS  # noqa: E402
 from planopt.mapeamento import carregar                # noqa: E402
 
-VERSAO = "0.1.0"
+VERSAO = "0.2.0"
 
 VERDE, AMARELO, VERMELHO, CINZA, NEGRITO, ZERA = (
     "\033[32m", "\033[33m", "\033[31m", "\033[90m", "\033[1m", "\033[0m")
@@ -190,6 +190,36 @@ def cmd_modelo(resto, como_json=False):
     return 0
 
 
+def cmd_pressao(resto, como_json=False):
+    """Quanto resta da janela medida, e o que fazer se estiver apertando.
+
+    Lê a mesma telemetria que a linha de status já grava a cada quadro — só
+    que até agora ninguém perguntava por ela na mão.
+    """
+    sessao = estado.ler_sessao(resto[0]) if resto else estado.sessao_mais_recente()
+    nivel = estado.pressao(sessao)
+    if como_json:
+        print(json.dumps({"sessao": sessao, "pressao": nivel}, ensure_ascii=False))
+        return 0
+    if sessao is None or nivel is None:
+        print(_c(CINZA, _t("res.sem_pressao")))
+        return 0
+    cinco = sessao.get("cinco_horas")
+    sete = sessao.get("sete_dias")
+    cor = {"normal": VERDE, "alerta": AMARELO, "critica": VERMELHO}.get(nivel, "")
+    print(_c(cor, _t("res.pressao_" + nivel,
+                     cinco if cinco is not None else "?",
+                     sete if sete is not None else "?")))
+    if nivel in ("alerta", "critica"):
+        mapa = carregar()
+        for tier in ("cara", "media", "barata", "trivial"):
+            candidato = mapa.melhor_gratis(tier)
+            if candidato:
+                modelo = candidato.get("modelo") or candidato["rotulo"]
+                print(_t("res.candidato_gratis", _rotulo(tier), candidato["alvo"], modelo))
+    return 0
+
+
 def cmd_modo(resto):
     if not resto:
         atual = estado.modo()
@@ -259,6 +289,21 @@ def cmd_statusline():
     return 0
 
 
+def _sugere_gratis(tier):
+    """Uma linha a mais: quem resolve isso sem tocar na conta medida.
+
+    O conselho de subagente já dá um modelo mais barato — mas ainda dentro do
+    mesmo plano. Isto aqui é o passo que falta para de fato particionar
+    trabalho para outra IA de graça, não só para um Claude mais barato.
+    """
+    gratis = carregar().melhor_gratis(tier)
+    if not gratis:
+        return
+    modelo = gratis.get("modelo")
+    detalhe = "%s (%s)" % (gratis["rotulo"], modelo) if modelo else gratis["rotulo"]
+    print(_t("hook.gratis", detalhe))
+
+
 def cmd_gancho():
     """UserPromptSubmit: opina antes de o modelo ler o pedido.
 
@@ -278,10 +323,11 @@ def cmd_gancho():
     veredito = classificar(texto)
     sessao = estado.ler_sessao(entrada.get("session_id") or "")
     modelo_atual = ((sessao or {}).get("modelo_id") or "").lower()
+    pressao_atual = estado.pressao(sessao)
 
     estado.anotar({"tier": veredito["tier"], "pontos": veredito["pontos"],
                    "continuacao": veredito["continuacao"], "modelo": modelo_atual,
-                   "modo": modo, "tamanho": len(texto)})
+                   "modo": modo, "tamanho": len(texto), "pressao": pressao_atual})
 
     if modo == "mudo":
         return 0
@@ -292,6 +338,9 @@ def cmd_gancho():
 
     # A interrupção é estreita de propósito: modelo caro, tarefa comprovadamente
     # barata, e certeza. Guarda que dispara na dúvida é desligada no mesmo dia.
+    # Pressão de uso entra só no que fala, nunca no que bloqueia — alargar o
+    # bloqueio é o tipo de mudança que este mesmo módulo já viu ser desligada
+    # no mesmo dia por disparar demais.
     if (modo == "guarda" and barato and caro_no_modelo
             and veredito["confianca"] >= 0.7):
         recomendado = carregar().escolha("claude", tier) or {}
@@ -314,6 +363,15 @@ def cmd_gancho():
                             (" · " + escolha["esforco"]) if escolha.get("esforco") else "")
         print(_t("hook.trivial", _rotulo(tier), delegue,
                  "; ".join(veredito["motivos"][:2]) or "—"))
+        _sugere_gratis(tier)
+        return 0
+
+    # A janela apertando é a hora em que "média" também merece pensar duas
+    # vezes — não porque a tarefa ficou mais fácil, mas porque o que resta do
+    # plano ficou mais curto. Isto só fala; o bloqueio continua sem tocar aqui.
+    if tier == "media" and pressao_atual == "critica" and veredito["confianca"] >= 0.7:
+        print(_t("hook.pressao_media", "; ".join(veredito["motivos"][:2]) or "—"))
+        _sugere_gratis(tier)
         return 0
 
     if tier == "cara":
@@ -329,6 +387,7 @@ def cmd_ajuda():
     print("  escolhe <alvo> <texto>  " + _t("res.escolha", "…"))
     print("  candidatos <texto>")
     print("  modelo <alvo> <faixa>   " + _t("res.escolha", "…"))
+    print("  pressao [sessao]        quanto resta da janela, e pra onde mandar se apertar")
     print("  modo [%s]" % "|".join(estado.MODOS))
     print("  idioma [%s]" % "|".join(i18n.idiomas()))
     print("  gancho | statusline | limpa | versao")
@@ -354,6 +413,8 @@ def main(argv):
         return cmd_candidatos(resto)
     if comando in ("modelo", "model"):
         return cmd_modelo(resto, como_json)
+    if comando in ("pressao", "pressão", "pressure"):
+        return cmd_pressao(resto, como_json)
     if comando in ("modo", "mode"):
         return cmd_modo(resto)
     if comando in ("idioma", "lang", "language"):

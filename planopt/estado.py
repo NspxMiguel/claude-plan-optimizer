@@ -113,6 +113,62 @@ def ler_sessao(sessao):
     return dados
 
 
+# --------------------------------------------------------------- pressão ---
+# A linha de status já grava `cinco_horas`/`sete_dias` a cada quadro, e até
+# aqui ninguém lia — o projeto sabia o preço da tarefa e nunca quanto restava
+# da janela. Esticar o que resta quando ela aperta é a metade do pedido que
+# fez esta seção existir: fazer o plano medido render como se fosse maior.
+PRESSAO_ALERTA = {"cinco_horas": 70, "sete_dias": 80}
+PRESSAO_CRITICA = {"cinco_horas": 90, "sete_dias": 95}
+
+
+def pressao(sessao):
+    """``critica`` | ``alerta`` | ``normal`` | ``None``.
+
+    ``None`` não é ``normal`` — é "esta sessão ainda não tem telemetria": no
+    plano Free o `rate_limits` nunca vem, e tratar a ausência como folga
+    esconderia justamente o caso em que não há como saber.
+    """
+    if not sessao:
+        return None
+    cinco = sessao.get("cinco_horas")
+    sete = sessao.get("sete_dias")
+    if not isinstance(cinco, (int, float)) and not isinstance(sete, (int, float)):
+        return None
+    cinco = cinco if isinstance(cinco, (int, float)) else 0
+    sete = sete if isinstance(sete, (int, float)) else 0
+    if cinco >= PRESSAO_CRITICA["cinco_horas"] or sete >= PRESSAO_CRITICA["sete_dias"]:
+        return "critica"
+    if cinco >= PRESSAO_ALERTA["cinco_horas"] or sete >= PRESSAO_ALERTA["sete_dias"]:
+        return "alerta"
+    return "normal"
+
+
+def sessao_mais_recente():
+    """Para quem chama `planopt pressao` na mão, sem saber o session_id.
+
+    O gancho sempre recebe o id certo no próprio evento; isto é só o atalho de
+    quem quer olhar o estado sem ir buscar o id em outro lugar.
+    """
+    _garante(SESSOES)
+    melhor = None
+    try:
+        nomes = os.listdir(SESSOES)
+    except OSError:
+        nomes = []
+    for nome in nomes:
+        if not nome.endswith(".json"):
+            continue
+        caminho = os.path.join(SESSOES, nome)
+        try:
+            mtime = os.path.getmtime(caminho)
+        except OSError:
+            continue
+        if melhor is None or mtime > melhor[0]:
+            melhor = (mtime, nome[:-5])
+    return ler_sessao(melhor[1]) if melhor else None
+
+
 def limpar_sessoes(idade=7 * 24 * 3600):
     """Sessão velha não serve para nada e nunca é apagada sozinha pelo sistema."""
     _garante(SESSOES)

@@ -30,6 +30,7 @@ planopt classifica "<the request>"     # trivial | barata | media | cara
 planopt explica    "<the request>"     # and why, feature by feature
 planopt escolhe subagente "<request>"  # model + effort for a subagent
 planopt candidatos "<request>"         # everyone who can do it, cheapest first
+planopt pressao                        # how much of the metered window is left
 ```
 
 `planopt` never calls a model to decide which model to call — that would be
@@ -84,6 +85,19 @@ four half an hour earlier. Always take the fall-through list, never a single id.
 **Escalate on failure, do not pre-escalate on doubt.** If the cheap model gets it
 wrong, redo it on the strong one — that costs one cheap attempt. Sending
 everything to the strong model to avoid ever redoing anything costs the plan.
+
+## Check the window before a big fan-out
+
+`planopt pressao` reads the same five-hour/seven-day usage the status line
+already shows. When it comes back `critica`, treat the metered account (the
+main session and its subagents) as reserved for what only Claude can do, and
+push everything else — `media` included — to `team`'s free/local targets
+first: `ollama`, `groq`, `openrouter`, `gemini`, `antigravity`, `opencode`, or
+`codex` on its own account. `planopt candidatos "<request>"` gives the full
+fall-through list for the tier; `planopt pressao` gives the one-line version
+for whichever tier is loudest right now. This is what makes a Pro-level plan
+last like a Max one: not spending less per task, spending it on a different
+account when the window is the thing running out.
 
 ## When to ignore all of this
 
