@@ -32,6 +32,44 @@ TEXTOS = {
         "res.por_que": "Por quê:",
         "res.sem_faixa": "Este alvo não atende essa faixa — procure outro agente.",
 
+        # motivo.*: os sinais que o classificador aponta em "explica"/"--json".
+        # Ficam aqui, não em classificador.py, porque texto pronto embutido no
+        # código é o mesmo jeito de nunca ter saído em inglês.
+        "motivo.causa_oculta": "defeito sem causa conhecida — achar custa mais que consertar",
+        "motivo.escopo_aberto": "escopo aberto — é varredura, não ponto",
+        "motivo.escopo_aberto_marcas": "escopo aberto — é varredura, não ponto (%d marcas)",
+        "motivo.varredura": "pede revisão ou auditoria",
+        "motivo.decisao": "exige decisão de arquitetura ou escolha entre caminhos",
+        "motivo.decisao_marcas": "exige decisão de arquitetura ou escolha entre caminhos (%d marcas)",
+        "motivo.risco": "mexe com segredo, permissão, dinheiro ou produção",
+        "motivo.desempenho": "desempenho: medir antes de mexer",
+        "motivo.dominios_tres": "toca %d frentes diferentes (%s)",
+        "motivo.dominios_duas": "toca duas frentes (%s)",
+        "motivo.emendas": "vários pedidos emendados na mesma mensagem",
+        "motivo.lista": "lista com %d itens",
+        "motivo.briefing_muito_longo": "briefing muito longo",
+        "motivo.briefing_longo": "briefing longo",
+        "motivo.pede_obra": "pede obra, não conversa",
+        "motivo.precisao": "já diz o arquivo, a linha ou o símbolo — não há o que procurar",
+        "motivo.mecanico": "edição mecânica: a resposta está no próprio pedido",
+        "motivo.pergunta": "é pergunta, não trabalho",
+        "motivo.curto_demais": "pedido curto demais para conter tarefa",
+        "motivo.sobe_por_seguranca": "em cima do corte — sobe de faixa por segurança",
+        "motivo.saudacao": "saudação, sem tarefa",
+        "motivo.manda_seguir": "manda seguir — o custo é o da tarefa em curso",
+
+        # dominio.*: os rótulos que motivo.dominios_* junta numa lista. As
+        # frentes técnicas (frontend, backend, docs, infra, mobile, i18n) são o
+        # mesmo termo nas duas línguas; só "dados"/"teste" mudam para inglês.
+        "dominio.frontend": "frontend",
+        "dominio.backend": "backend",
+        "dominio.data": "dados",
+        "dominio.test": "teste",
+        "dominio.docs": "docs",
+        "dominio.infra": "infra",
+        "dominio.mobile": "mobile",
+        "dominio.i18n": "i18n",
+
         "hook.trivial": (
             "[planopt] Este pedido é %s. Não gaste modelo grande nele: "
             "faça direto, e se for delegar, %s. "
@@ -103,6 +141,38 @@ TEXTOS = {
         "res.confianca_baixa": "right on the boundary — check before trusting it",
         "res.por_que": "Why:",
         "res.sem_faixa": "This target does not serve that tier — pick another agent.",
+
+        "motivo.causa_oculta": "defect with no known cause — finding it costs more than fixing it",
+        "motivo.escopo_aberto": "open scope — this is a sweep, not a point fix",
+        "motivo.escopo_aberto_marcas": "open scope — this is a sweep, not a point fix (%d marks)",
+        "motivo.varredura": "asks for a review or an audit",
+        "motivo.decisao": "calls for an architecture decision or a choice between paths",
+        "motivo.decisao_marcas": "calls for an architecture decision or a choice between paths (%d marks)",
+        "motivo.risco": "touches a secret, a permission, money, or production",
+        "motivo.desempenho": "performance: measure before touching anything",
+        "motivo.dominios_tres": "touches %d different areas (%s)",
+        "motivo.dominios_duas": "touches two areas (%s)",
+        "motivo.emendas": "several requests stitched into one message",
+        "motivo.lista": "a list with %d items",
+        "motivo.briefing_muito_longo": "very long brief",
+        "motivo.briefing_longo": "long brief",
+        "motivo.pede_obra": "asks for work, not conversation",
+        "motivo.precisao": "already names the file, the line, or the symbol — nothing to search for",
+        "motivo.mecanico": "mechanical edit: the answer is inside the request itself",
+        "motivo.pergunta": "it's a question, not work",
+        "motivo.curto_demais": "too short to contain a task",
+        "motivo.sobe_por_seguranca": "right on the boundary — bumps up a tier for safety",
+        "motivo.saudacao": "greeting, no task",
+        "motivo.manda_seguir": "keep going — the cost is the running task's",
+
+        "dominio.frontend": "frontend",
+        "dominio.backend": "backend",
+        "dominio.data": "data",
+        "dominio.test": "test",
+        "dominio.docs": "docs",
+        "dominio.infra": "infra",
+        "dominio.mobile": "mobile",
+        "dominio.i18n": "i18n",
 
         "hook.trivial": (
             "[planopt] This request is %s. Do not spend a big model on it: "

@@ -10,11 +10,17 @@ O segundo princípio é que **continuação não se classifica**. "continua", "d
 sobre o custo: o trabalho é o que já estava rodando. Fingir que dá para ler o
 custo em "dale" é a forma mais fácil de destruir uma sessão inteira — o pedido
 mais barato de escrever pode ser a continuação da tarefa mais cara em curso.
+
+Os motivos que este módulo produz não são texto pronto: são uma chave de
+``i18n`` mais os argumentos dela. "Não toca a rede" (ver o teste que trava
+isso) não é sobre idioma — é sobre não chamar modelo para decidir modelo. Ler
+um dicionário local em português e inglês é a mesma coisa que ler `lexico.py`.
 """
 
 import re
 import unicodedata
 
+from . import i18n
 from . import lexico as lx
 
 TIERS = ("trivial", "barata", "media", "cara")
@@ -51,6 +57,10 @@ def _itens(texto):
 
 def _dominios(texto):
     return [nome for nome, padrao in lx.DOMINIOS if padrao.search(texto)]
+
+
+def _rotulo_dominio(nome, lang):
+    return i18n.t("dominio." + nome, lang=lang)
 
 
 def _e_continuacao(texto, bruto):
@@ -94,17 +104,17 @@ def _distintos(padrao, texto):
     return len(set(m.group(0).lower() for m in padrao.finditer(texto)))
 
 
-def _pontuar(texto, bruto):
-    """Soma os sinais e devolve (pontos, motivos legíveis)."""
+def _pontuar(texto, bruto, lang):
+    """Soma os sinais e devolve (pontos, motivos como chave + argumentos)."""
     pontos = 0
     motivos = []
 
-    def marca(delta, motivo):
+    def marca(delta, chave, *args):
         nonlocal pontos
         pontos += delta
-        motivos.append((delta, motivo))
+        motivos.append((delta, chave, args))
 
-    def marca_intensa(padrao, base, motivo, teto=2):
+    def marca_intensa(padrao, base, chave, teto=2):
         """Categoria pesada pontua pela quantidade de marcas distintas.
 
         Uma marca é um sinal; quatro são outro. "vale a pena migrar de
@@ -116,59 +126,62 @@ def _pontuar(texto, bruto):
         if not quantas:
             return
         extra = min(quantas - 1, teto)
-        marca(base + extra,
-              motivo + (" (%d marcas)" % quantas if extra else ""))
+        if extra:
+            marca(base + extra, chave + "_marcas", quantas)
+        else:
+            marca(base + extra, chave)
 
     doms = _dominios(texto)
 
     defeito = bool(lx.CAUSA_OCULTA.search(texto) or lx.NEGACAO_DEFEITO.search(texto))
     if defeito:
-        marca(3, "defeito sem causa conhecida — achar custa mais que consertar")
-    marca_intensa(lx.AMPLITUDE, 3, "escopo aberto — é varredura, não ponto")
+        marca(3, "motivo.causa_oculta")
+    marca_intensa(lx.AMPLITUDE, 3, "motivo.escopo_aberto")
     if lx.VARREDURA.search(texto):
-        marca(2, "pede revisão ou auditoria")
-    marca_intensa(lx.DECISAO, 3,
-                  "exige decisão de arquitetura ou escolha entre caminhos")
+        marca(2, "motivo.varredura")
+    marca_intensa(lx.DECISAO, 3, "motivo.decisao")
     if lx.RISCO.search(texto):
-        marca(3, "mexe com segredo, permissão, dinheiro ou produção")
+        marca(3, "motivo.risco")
     if lx.DESEMPENHO.search(texto):
-        marca(2, "desempenho: medir antes de mexer")
+        marca(2, "motivo.desempenho")
 
     if len(doms) >= 3:
-        marca(3, "toca %d frentes diferentes (%s)" % (len(doms), ", ".join(doms)))
+        rotulos = ", ".join(_rotulo_dominio(d, lang) for d in doms)
+        marca(3, "motivo.dominios_tres", len(doms), rotulos)
     elif len(doms) == 2:
-        marca(2, "toca duas frentes (%s)" % ", ".join(doms))
+        rotulos = ", ".join(_rotulo_dominio(d, lang) for d in doms)
+        marca(2, "motivo.dominios_duas", rotulos)
 
     emendas = len(set(m.group(0).lower() for m in lx.EMENDA.finditer(texto)))
     if emendas:
-        marca(min(emendas, 2), "vários pedidos emendados na mesma mensagem")
+        marca(min(emendas, 2), "motivo.emendas")
 
     itens = _itens(bruto)
     if itens >= 3:
-        marca(1, "lista com %d itens" % itens)
+        marca(1, "motivo.lista", itens)
 
     if len(bruto) > 2500:
-        marca(2, "briefing muito longo")
+        marca(2, "motivo.briefing_muito_longo")
     elif len(bruto) > 1200:
-        marca(1, "briefing longo")
+        marca(1, "motivo.briefing_longo")
 
     if lx.CONSTRUIR.search(texto):
-        marca(1, "pede obra, não conversa")
+        marca(1, "motivo.pede_obra")
 
     # ---- o que barateia ----
     if lx.PRECISAO.search(bruto):
-        marca(-2, "já diz o arquivo, a linha ou o símbolo — não há o que procurar")
+        marca(-2, "motivo.precisao")
     if lx.MECANICO.search(texto) and len(bruto) < 400:
-        marca(-2, "edição mecânica: a resposta está no próprio pedido")
+        marca(-2, "motivo.mecanico")
     amplo = bool(lx.AMPLITUDE.search(texto) or lx.VARREDURA.search(texto))
     if (lx.CONSULTA.search(texto) and not lx.CONSTRUIR.search(texto)
             and len(bruto) < 200 and not defeito and not amplo):
-        marca(-2, "é pergunta, não trabalho")
+        marca(-2, "motivo.pergunta")
     # Pedido curto só é barato quando não relata defeito nem abre escopo. O
     # tamanho da mensagem não tem relação com o tamanho do trabalho: "bug" são
     # três letras e uma caçada inteira.
     if len(bruto) < 25 and not defeito and not amplo:
-        marca(-2, "pedido curto demais para conter tarefa")
+        marca(-2, "motivo.curto_demais")
 
     return pontos, motivos
 
@@ -187,28 +200,33 @@ def _piso(texto, tier):
     return tier
 
 
-def classificar(pedido):
+def classificar(pedido, lang=None):
     """Devolve o veredito sobre um pedido.
 
     ``tier`` é ``None`` quando o pedido é continuação: aí não há o que
     classificar, e quem chama deve manter o que já estava valendo.
+
+    ``lang`` decide em que língua ``motivos``/``detalhe`` saem — ``pt`` ou
+    ``en``, mesmo par que ``i18n.idiomas()`` conhece. Sem ele, cai no mesmo
+    padrão de sempre (variável de ambiente, depois locale do sistema): quem
+    chama sem saber de idioma continua recebendo o que já recebia.
     """
+    lang = lang or i18n.idioma()
     bruto = (pedido or "").strip()
     texto = _sem_acento(bruto)
 
     if not bruto:
-        return _veredito(None, 0, [], continuacao=False, vazio=True)
+        return _veredito(None, 0, [], continuacao=False, vazio=True, lang=lang)
 
     if lx.SAUDACAO.search(texto) and len(bruto) < 30 and not lx.CONSTRUIR.search(texto):
-        return _veredito("trivial", 1.0,
-                         [(0, "saudação, sem tarefa")], continuacao=False)
+        return _veredito("trivial", 1.0, [(0, "motivo.saudacao", ())],
+                         continuacao=False, lang=lang)
 
     if _e_continuacao(texto, bruto):
-        return _veredito(None, 1.0,
-                         [(0, "manda seguir — o custo é o da tarefa em curso")],
-                         continuacao=True)
+        return _veredito(None, 1.0, [(0, "motivo.manda_seguir", ())],
+                         continuacao=True, lang=lang)
 
-    pontos, motivos = _pontuar(texto, bruto)
+    pontos, motivos = _pontuar(texto, bruto, lang)
 
     tier = "trivial"
     for corte, nome in _CORTES:
@@ -227,20 +245,21 @@ def classificar(pedido):
         subiu = next(nome for corte, nome in _CORTES if corte == proximo_corte)
         if _ORDEM[subiu] > _ORDEM[tier] and subiu != "cara":
             tier = subiu
-            motivos.append((0, "em cima do corte — sobe de faixa por segurança"))
+            motivos.append((0, "motivo.sobe_por_seguranca", ()))
 
     tier = _piso(texto, tier)
     confianca = 0.55 if perto else 0.85
-    return _veredito(tier, confianca, motivos, continuacao=False, pontos=pontos)
+    return _veredito(tier, confianca, motivos, continuacao=False, pontos=pontos, lang=lang)
 
 
-def _veredito(tier, confianca, motivos, continuacao, pontos=0, vazio=False):
+def _veredito(tier, confianca, motivos, continuacao, pontos=0, vazio=False, lang=None):
     return {
         "tier": tier,
         "continuacao": continuacao,
         "vazio": vazio,
         "pontos": pontos,
         "confianca": confianca,
-        "motivos": [m for _, m in motivos],
-        "detalhe": [{"peso": p, "motivo": m} for p, m in motivos if p],
+        "motivos": [i18n.t(chave, *args, lang=lang) for _, chave, args in motivos],
+        "detalhe": [{"peso": p, "motivo": i18n.t(chave, *args, lang=lang)}
+                    for p, chave, args in motivos if p],
     }

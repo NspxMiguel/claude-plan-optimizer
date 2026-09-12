@@ -180,6 +180,12 @@ Two related traps the mapping encodes:
 Portuguese and English from the first line printed. The system language decides
 the default, `PLANOPT_LANG` forces one, and `planopt idioma` persists a choice.
 
+That includes the classifier's own reasons, not just the CLI's fixed strings:
+`classificar()` takes a `lang` and resolves every "why" line — and the domain
+names it joins into them (`ui, banco de dados, testes` vs `frontend, data,
+test`) — through the same dictionary, instead of the reasons staying hardcoded
+in Portuguese regardless of what language the rest of the output was in.
+
 ## Layout
 
 ```

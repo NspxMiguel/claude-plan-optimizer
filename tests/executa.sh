@@ -33,6 +33,9 @@ verifica "escolhe dá modelo"         "python3 bin/planopt escolhe subagente 'mu
 verifica "candidatos vêm do grátis"  "python3 bin/planopt candidatos 'muda a cor do botao'" 'gratis'
 verifica "json é json"               "python3 bin/planopt classifica --json 'faz um app'"   '\"tier\"'
 verifica "inglês responde em inglês" "PLANOPT_LANG=en python3 bin/planopt classifica 'change the colour'" 'Tier'
+verifica "motivo também sai em inglês, não só o rótulo da faixa" \
+  "PLANOPT_LANG=en python3 bin/planopt explica 'revisa tudo: ui, banco de dados e testes'" \
+  'touches [0-9]+ different areas \(frontend, data, test\)'
 verifica "statusline lê e imprime"   "echo '{\"session_id\":\"t\",\"model\":{\"id\":\"claude-opus-5\",\"display_name\":\"Opus\"}}' | python3 bin/planopt statusline" 'Opus'
 verifica "gancho cala em continuação" "echo '{\"prompt\":\"dale\"}' | python3 bin/planopt gancho | wc -c" '^ *0$'
 verifica "gancho fala em tarefa cara" "echo '{\"prompt\":\"revisa o app inteiro e testa tudo\"}' | python3 bin/planopt gancho" 'planopt'

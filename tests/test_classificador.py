@@ -113,6 +113,44 @@ class Assimetria(unittest.TestCase):
             self.assertEqual(veredito["tier"], "media")
 
 
+class Idioma(unittest.TestCase):
+    """Os motivos são texto localizado, não texto fixo em português.
+
+    O README promete "Portuguese and English from the first line printed" —
+    a lista de motivos era a exceção que ficava sempre em português, porque
+    classificador.py embutia o texto pronto em vez de uma chave de i18n.
+    """
+
+    def test_motivo_muda_de_lingua(self):
+        texto = "arruma o css e a rota da api e o banco de dados"
+        pt = classificar(texto, lang="pt")
+        en = classificar(texto, lang="en")
+        self.assertNotEqual(pt["motivos"], en["motivos"])
+        self.assertTrue(any("pede obra" in m for m in pt["motivos"]))
+        self.assertTrue(any("asks for work" in m for m in en["motivos"]))
+
+    def test_nomes_de_dominio_tambem_traduzem(self):
+        """"dados" e "teste" mudam de língua; o resto é o mesmo termo técnico."""
+        texto = "revisa tudo: ui, banco de dados e os testes"
+        pt = classificar(texto, lang="pt")
+        en = classificar(texto, lang="en")
+        motivo_pt = " ".join(pt["motivos"])
+        motivo_en = " ".join(en["motivos"])
+        self.assertIn("dados", motivo_pt)
+        self.assertIn("teste", motivo_pt)
+        self.assertIn("data", motivo_en)
+        self.assertIn("test", motivo_en)
+
+    def test_sem_lang_cai_no_padrao_de_sempre(self):
+        """Quem chama sem saber de idioma continua recebendo o que recebia."""
+        veredito = classificar("dale")
+        self.assertIsNone(veredito["tier"])
+        self.assertTrue(veredito["motivos"])
+
+    def test_veredito_vazio_nao_quebra_sem_lang(self):
+        self.assertTrue(classificar("", lang="en")["vazio"])
+
+
 class Robustez(unittest.TestCase):
     def test_vazio(self):
         for texto in ("", "   ", None):
