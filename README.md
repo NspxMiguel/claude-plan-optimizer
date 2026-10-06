@@ -1,7 +1,25 @@
-# claude-plan-optimizer
+<h1 align="center">claude-plan-optimizer</h1>
 
-Picks the right model at the right reasoning effort for the task in front of it,
-so the strongest model stops being spent on changing a colour.
+<p align="center">
+  <b>Picks the right model at the right reasoning effort for the task in front of it,</b><br>
+  so the strongest model stops being spent on changing a colour.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white">
+  <a href="https://github.com/NspxMiguel/claude-plan-optimizer/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/NspxMiguel/claude-plan-optimizer/tests.yml?branch=main&label=tests"></a>
+</p>
+
+<p align="center">
+  <a href="#why-it-exists">Why</a> ·
+  <a href="#how-it-decides">How it decides</a> ·
+  <a href="#enforced-or-advisory--the-honest-table">Enforced or advisory</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#use">Use</a> ·
+  <a href="#layout">Layout</a> ·
+  <a href="docs/INDEX.md">Docs</a>
+</p>
 
 ```
 $ planopt explica "muda a cor do botao pra azul"
@@ -63,7 +81,8 @@ already running. They are detected and excluded rather than guessed at. The
 mirror case matters too: `ok, agora refaz o backend inteiro` starts with `ok` and
 is the most expensive request in the set.
 
-## Making a metered plan act like a bigger one
+<details>
+<summary><b>Making a metered plan act like a bigger one</b></summary>
 
 The status line already receives the five-hour and seven-day usage percentage
 every frame (`estado.anotar_sessao`) — the hook just never read it. It does now:
@@ -90,7 +109,10 @@ fica na conta medida.
   trivial   -> ollama      Ollama (local)
 ```
 
-## Partitioning to other free AIs, not just a cheaper Claude
+</details>
+
+<details>
+<summary><b>Partitioning to other free AIs, not just a cheaper Claude</b></summary>
 
 A subagent recommendation (`haiku`, low effort) is still billed to the same
 metered account — cheaper inside the plan, but still the plan. That is a
@@ -111,6 +133,8 @@ e se for delegar, haiku · medium. Motivo: pede obra, não conversa.
 given tier, cheapest first — it always excluded the metered account by
 default. What changed is that the hook now surfaces the head of that list
 proactively, instead of requiring you to ask for it.
+
+</details>
 
 ## Enforced or advisory — the honest table
 
@@ -160,7 +184,8 @@ exactly one case: an expensive model meeting a confidently cheap task. `mudo`
 classifies and records without saying anything, for measuring against your own
 requests before changing how you work.
 
-## Free tiers are queues, not services
+<details>
+<summary><b>Free tiers are queues, not services</b></summary>
 
 Every free target is a fall-through list, never one id. In one measurement four
 of sixteen free models were unavailable, and a different four half an hour
@@ -175,7 +200,10 @@ Two related traps the mapping encodes:
   billed, and OpenRouter's `deepseek-*:free` is gone. It stays in the map marked
   as paid so it is never picked automatically.
 
-## Language
+</details>
+
+<details>
+<summary><b>Language</b></summary>
 
 Portuguese and English from the first line printed. The system language decides
 the default, `PLANOPT_LANG` forces one, and `planopt idioma` persists a choice.
@@ -185,6 +213,8 @@ That includes the classifier's own reasons, not just the CLI's fixed strings:
 names it joins into them (`ui, banco de dados, testes` vs `frontend, data,
 test`) — through the same dictionary, instead of the reasons staying hardcoded
 in Portuguese regardless of what language the rest of the output was in.
+
+</details>
 
 ## Layout
 
@@ -200,12 +230,8 @@ docs/MODELOS-GRATIS.md     the measurement the cheap tiers rest on
 
 ## Licence
 
-MIT.
+[MIT](LICENSE).
 
----
+## Documentation
 
-## Documentação
-
-Índice completo em [`docs/INDEX.md`](docs/INDEX.md).
-
-_Hub multi-repo: `~/Documents/Documentacao-Repos/INDEX.md` (atualizado 2026-08-31)._
+Full index in [`docs/INDEX.md`](docs/INDEX.md).
